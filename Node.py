@@ -5,8 +5,10 @@ import numpy as np
 import threading
 import pickle
 
-def updateTable(node_distance_vector, data_arr, current_port):
+done = threading.Event()
 
+def updateTable(node_distance_vector, data_arr, current_port):
+    update = False
     for i in range(len(node_distance_vector)):
         for j in range(len(node_distance_vector)):
 
@@ -14,20 +16,22 @@ def updateTable(node_distance_vector, data_arr, current_port):
                 #print("++++")
                 node_distance_vector[current_port-3000][i] = node_distance_vector[current_port -
                                                                                     3000][j]+data_arr[j][i]
+                update = True
+    return update
 
-    return node_distance_vector
-
+    
 
 def printResult(current_node, node_distance_vector):
     for i in range(len(node_distance_vector)):
         print(str(current_node) + " -"+str(3000+i)+" | "+str(int(node_distance_vector[current_node-3000][i])))
 
 
-def listenMessage(node_distance_vector, current_port, neighbours):
+def listenMessage(node_distance_vector, current_port, updated):
+    global done
+
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5.0)
-
+        sock.settimeout(5)
         server_address = ('localhost', current_port)
         sock.bind(server_address)
 
@@ -39,13 +43,21 @@ def listenMessage(node_distance_vector, current_port, neighbours):
 
                 
                 while True:
+                   
                     data = connection.recv(4096)
                     if data:
                         data_arr = pickle.loads(data)
-                        
-                        node_distance_vector = updateTable(node_distance_vector,
+
+                        updated = updateTable(node_distance_vector,
                                     data_arr, current_port)
 
+                        if(updated):
+                            done.set()
+                            sock.settimeout(5)
+                        else:
+                            done.clear()
+                        
+                        
                         continue
                     else:
                         break
@@ -55,17 +67,17 @@ def listenMessage(node_distance_vector, current_port, neighbours):
                 continue
     except:
         # print("Exiting"+str(current_port))
-       
+        sock.close()
         exit(0)
 
 
+    
 def sendMessage(node_distance_vector, current_port, dest_port, neighbours):
 
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
         server_address = ('localhost', dest_port)
-
+       
         #print("Current port " + str(current_port)+" is connecting to "+str(dest_port))
 
         while True:
@@ -73,7 +85,8 @@ def sendMessage(node_distance_vector, current_port, dest_port, neighbours):
                 sock.connect(server_address)
                 break
             except:
-                continue
+                sock.close()
+                return
         #print("Current port " + str(current_port)+" is CONNECTED to "+str(dest_port))
 
         try:
@@ -89,29 +102,32 @@ def sendMessage(node_distance_vector, current_port, dest_port, neighbours):
         finally:
             
             sock.close()
+            return
 
     except:
-        exit(0)
+        return
 
 
 def communicate(node_distance_vector, current_port, neighbours):
     #print("In " + str(current_port))
 
+    global done
+    updated = False
     x = threading.Thread(target=listenMessage, args=(
-        node_distance_vector, current_port, neighbours))
+        node_distance_vector, current_port, updated))
+    x.daemon = True
 
     x.start()
-
-    for i in range(len(node_distance_vector)+100):
-
+    now = time.time()
+    while(time.time()<now+5):
+        
         for el in neighbours:
-
-            y = threading.Thread(target=sendMessage, args=(
-                node_distance_vector, current_port, el, neighbours))
-            y.start()
-            y.join()
-    x.join()
-
+            if(done.is_set()):
+                
+                now = time.time()
+            sendMessage(
+                node_distance_vector, current_port, el, neighbours)
+        
 def updateInitial(node_distance_vector, current_port, Lines):
     for el in Lines[1:]:
         node_distance_vector[current_port -
@@ -141,6 +157,9 @@ if __name__ == "__main__":
 
     updateInitial(node_distance_vector, current_port, Lines)
     
+
     communicate(node_distance_vector, current_port, neighbours)
 
     printResult(current_port,node_distance_vector)
+
+    sys.exit()
