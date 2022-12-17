@@ -33,8 +33,7 @@ def listenMessage(node_distance_vector, current_port, updated):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(5)
         server_address = ('localhost', current_port)
-        sock.bind(server_address)
-
+        sock.bind(server_address) 
         sock.listen()
         while True:
             
@@ -105,6 +104,7 @@ def sendMessage(node_distance_vector, current_port, dest_port, neighbours):
             return
 
     except:
+        sock.close()
         return
 
 
@@ -162,4 +162,4 @@ if __name__ == "__main__":
 
     printResult(current_port,node_distance_vector)
 
-    sys.exit()
+   
