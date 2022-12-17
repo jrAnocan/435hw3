@@ -53,8 +53,10 @@ def listenMessage(node_distance_vector, current_port, updated):
                         if(updated):
                             done.set()
                             sock.settimeout(5)
+                            
                         else:
                             done.clear()
+                            
                         
                         
                         continue
@@ -104,6 +106,7 @@ def sendMessage(node_distance_vector, current_port, dest_port, neighbours):
             return
 
     except:
+        done.set()
         sock.close()
         return
 
@@ -112,6 +115,7 @@ def communicate(node_distance_vector, current_port, neighbours):
     #print("In " + str(current_port))
 
     global done
+    done.set()
     updated = False
     x = threading.Thread(target=listenMessage, args=(
         node_distance_vector, current_port, updated))
@@ -119,14 +123,16 @@ def communicate(node_distance_vector, current_port, neighbours):
 
     x.start()
     now = time.time()
+   
     while(time.time()<now+5):
         
         for el in neighbours:
             if(done.is_set()):
-                
                 now = time.time()
+                done.clear()
             sendMessage(
                 node_distance_vector, current_port, el, neighbours)
+        done.wait(True)
         
 def updateInitial(node_distance_vector, current_port, Lines):
     for el in Lines[1:]:
@@ -157,9 +163,10 @@ if __name__ == "__main__":
 
     updateInitial(node_distance_vector, current_port, Lines)
     
-
+    #print(time.asctime( time.localtime(time.time()) ))
     communicate(node_distance_vector, current_port, neighbours)
 
     printResult(current_port,node_distance_vector)
+    #print(time.asctime( time.localtime(time.time()) ))
 
    
