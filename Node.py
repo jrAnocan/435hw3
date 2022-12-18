@@ -132,7 +132,7 @@ def communicate(node_distance_vector, current_port, neighbours):
                 done.clear()
             sendMessage(
                 node_distance_vector, current_port, el, neighbours)
-        done.wait(True)
+        done.wait(0.01)
         
 def updateInitial(node_distance_vector, current_port, Lines):
     for el in Lines[1:]:
