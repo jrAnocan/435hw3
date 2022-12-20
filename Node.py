@@ -165,8 +165,11 @@ if __name__ == "__main__":
     
     #print(time.asctime( time.localtime(time.time()) ))
     communicate(node_distance_vector, current_port, neighbours)
-
+    time.sleep(0.01*(current_port-3000))
+    print("")
     printResult(current_port,node_distance_vector)
+    print("")
+    print("")
     #print(time.asctime( time.localtime(time.time()) ))
 
    
